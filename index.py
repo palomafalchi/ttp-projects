@@ -7,7 +7,7 @@ from datetime import datetime
 bucket_name = "transcricoes-fireflies-ttp"
 fireflies_api_url = "https://api.fireflies.ai/graphql"
 fireflies_api_key = "467f3c6a-e4a7-4910-9500-34c302dfa15c"
-transcript_id = "Kkgk2F7dhbU4S3p7"
+transcript_id = "00v4bEr83aff0uvY"
 
 # Cliente S3
 s3 = boto3.client('s3')
