@@ -2,7 +2,6 @@
 __pycache__/
 *.py[cod]
 *$py.class
-config/.env
 transcricoes-fireflies/config/.env
 lambdas-s3/.venv
 # C extensions
