@@ -4,6 +4,7 @@ __pycache__/
 *$py.class
 config/.env
 transcricoes-fireflies/config/.env
+lambdas-s3/.venv
 # C extensions
 *.so
 
