@@ -8,16 +8,13 @@ import os
 # Configurações
 load_dotenv('config.env')
 
-api_key = os.getenv('API_KEY')
-secret_key = os.getenv('SECRET_KEY')
 
-print(f"API Key: {api_key}")
-print(f"Secret Key: {secret_key}")
+# transcript_id = "00v4bEr83aff0uvY"
 
-bucket_name = "transcricoes-fireflies-ttp"
-fireflies_api_url = "https://api.fireflies.ai/graphql"
-fireflies_api_key = "467f3c6a-e4a7-4910-9500-34c302dfa15c"
-transcript_id = "00v4bEr83aff0uvY"
+# Configurações
+bucket_name = os.getenv('BUCKET_S3')
+fireflies_api_url = os.getenv('URL_FIREFLIES')
+fireflies_api_key = os.getenv('API_KEY_FIREFLIES')
 
 # Cliente S3
 s3 = boto3.client('s3')

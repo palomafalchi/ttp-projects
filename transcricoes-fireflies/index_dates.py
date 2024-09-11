@@ -3,12 +3,17 @@ import requests
 from fpdf import FPDF
 from datetime import datetime
 import json
-
+from dotenv import load_dotenv
+import os
 
 # Configurações
-bucket_name = "transcricoes-fireflies-ttp"
-url = "https://api.fireflies.ai/graphql"
-fireflies_api_key = "467f3c6a-e4a7-4910-9500-34c302dfa15c"
+load_dotenv('config.env')
+
+# Configurações
+# Configurações
+bucket_name = os.getenv('BUCKET_S3')
+url = os.getenv('URL_FIREFLIES')
+fireflies_api_key = os.getenv('API_KEY_FIREFLIES')
 
 s3 = boto3.client('s3')
 
