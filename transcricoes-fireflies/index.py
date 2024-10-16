@@ -9,7 +9,7 @@ import os
 load_dotenv('config.env')
 
 
-# transcript_id = "00v4bEr83aff0uvY"
+transcript_id = "00v4bEr83aff0uvY"
 
 # Configurações
 bucket_name = os.getenv('BUCKET_S3')
