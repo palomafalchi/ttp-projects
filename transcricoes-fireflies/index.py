@@ -82,14 +82,14 @@ def lambda_handler(event, context):
         },
         json={"query": query, "variables": variables}
     )
-    
+
     # Verificar se a requisição foi bem-sucedida
     if response.status_code == 200:
         data = response.json()
         transcript = data['data']['transcript']
         
         formatted_date = format_date(transcript['dateString'])
-        
+
         # Gerar o conteúdo do PDF
         pdf_content = f"Título: {transcript['title']}\Data: {formatted_date}\n\n"
         previous_speaker = ""
@@ -100,7 +100,7 @@ def lambda_handler(event, context):
                 else:
                     pdf_content += f"{sentence['speaker_name']}: {sentence['text']}\n"
             previous_speaker = sentence['speaker_name']
-            
+
         # Criar o PDF
         pdf_filename = f"{transcript['title']}-{transcript['dateString']}.pdf"
         pdf_path = create_pdf(pdf_content, pdf_filename)
