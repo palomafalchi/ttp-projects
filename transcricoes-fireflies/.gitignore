@@ -4,7 +4,7 @@ __pycache__/
 *$py.class
 transcricoes-fireflies/config/.env
 lambdas-s3/.venv
-transcricoes-fireflies/lambda_package
+lambda_package
 .venv
 venv
 .env

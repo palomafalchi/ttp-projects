@@ -1,3 +1,6 @@
 boto3
 requests
-fpdf
+fpdf2 2.8.1
+urllib3
+datetime
+python-dotenv
