@@ -1,6 +1,7 @@
 import boto3
 import requests
 from fpdf import FPDF
+import urllib3
 import json
 import os
 from datetime import datetime, timedelta
@@ -12,6 +13,9 @@ load_dotenv('config/.env')
 bucket_name = os.getenv('BUCKET_S3')
 url = os.getenv('URL_FIREFLIES')
 fireflies_api_key = os.getenv('API_KEY_FIREFLIES')
+
+# Desabilitar o aviso de requisição insegura
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # Cliente S3
 s3 = boto3.client('s3', region_name='sa-east-1')

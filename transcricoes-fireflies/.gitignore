@@ -8,6 +8,9 @@ lambda_package
 .venv
 venv
 .env
+lambda_function.zip
+transcripts.json
+
 # C extensions
 *.so
 
