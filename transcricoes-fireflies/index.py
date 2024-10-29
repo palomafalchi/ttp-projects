@@ -7,12 +7,13 @@ import os
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 import json
+import re
 
 # Configurações
 load_dotenv('config/.env')
 bucket_name = os.getenv('BUCKET_S3')
-url = os.getenv('URL_FIREFLIES')
-fireflies_api_key = os.getenv('API_KEY_FIREFLIES')
+url = os.getenv('URL_TRANSCRIPTIONS')
+transcription_api_key = os.getenv('API_KEY_TRANSCRIPTIONS')
 
 # Desabilitar o aviso de requisição insegura
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -21,13 +22,18 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 s3 = boto3.client('s3', region_name='sa-east-1')
 
 def lambda_handler(event, context):
-    # Ler os dados salvos no arquivo JSON
     try:
+        fetch_transcripts()
+        
+        # Ler os dados salvos no arquivo JSON
         with open('transcripts.json', 'r') as f:
             transcripts = json.load(f)
-    except FileNotFoundError:
-        print("Arquivo 'transcripts.json' não encontrado. Execute a função 'fetch_transcripts()' primeiro.")
-        return
+            
+    except Exception as e:
+        return {
+            'statusCode': 500,
+            'body': f"Erro ao processar: {str(e)}"
+        }
 
     # Processar cada transcrição e gerar o PDF
     for item in transcripts:
@@ -38,12 +44,15 @@ def lambda_handler(event, context):
         
         # Atualizar o pdf_content com as informações da transcrição
         pdf_content = get_sentences(pdf_content, item['id'])
-        pdf_filename = f"{formatted_date}-{item['id']}.pdf"
+        title_without_specials = re.sub(r'[^A-Za-z0-9]', '', item['title']) or item['id']
+
+        print('title_without_spaces',title_without_specials)
+        pdf_filename = f"{formatted_date}-{title_without_specials}.pdf"
         
         # Gerar o PDF com o conteúdo atualizado
         pdf_path = format_pdf(pdf_content, pdf_filename)
 
-        print(f"PDF gerado em handleer depois format_pdf: {pdf_path}")
+        print(f"PDF gerado em handleer depois fformat_pdf: {pdf_path}")
         
         save_pdf_s3(pdf_path, pdf_filename)
 
@@ -57,6 +66,7 @@ def format_pdf(content, filename):
         # Defina a largura da célula para a largura da página menos as margens
         page_width = pdf.epw  # epw é a largura da área de conteúdo da página
 
+        content = re.sub(r'…', '...', content) 
         # Adiciona o conteúdo diretamente ao PDF
         pdf.multi_cell(page_width, 10, content)
 
@@ -66,7 +76,7 @@ def format_pdf(content, filename):
         print('PDF salvo em FORMAT PDF:', pdf_output)
         return pdf_output
     except Exception as e:
-        print(f"Erro ao criar PDF: {e}")
+        print(f"Erro ao gerar PDF: {e}")
         raise
   
 def format_date(date_string):
@@ -85,7 +95,7 @@ def get_sentences(pdf_content, id):
         
     headers = {
         'Content-Type': 'application/json',
-        'Authorization': f"Bearer {fireflies_api_key}"
+        'Authorization': f"Bearer {transcription_api_key}"
     }
 
     response = requests.request("POST", url, headers=headers, data=payload, verify=False)
@@ -119,3 +129,49 @@ def save_pdf_s3(pdf_path, pdf_filename):
             print(f"PDF salvo no S3: {pdf_filename}")
         except Exception as e:
             print(f"Erro ao salvar o PDF no S3: {e}")
+
+def fetch_transcripts():
+    try:
+        # Obter o horário atual
+        current_time = datetime.now()
+        print('current_time.hour', current_time.hour)
+        if current_time.hour == 9:
+            # Se for 9h, 15 horas antes pra buscar a partir das 18h do dia anterior
+            current_time_adjusted = current_time - timedelta(hours=15)
+        else:
+            # Caso contrário, 3 horas antes
+            current_time_adjusted = current_time - timedelta(hours=3)
+
+        # Adicionar 3 horas ao horário atual
+        current_time_plus_3 = current_time_adjusted + timedelta(hours=3)
+        # Converter para o formato ISO 8601
+        current_time_iso = current_time_plus_3.isoformat()
+        current_time_iso = "2024-10-28T15:37:40.695001"
+        print(current_time_iso)
+
+
+        payload = f"{{\"query\":\"query Transcripts($fromDate: DateTime) {{ transcripts(fromDate: $fromDate) {{ title id dateString }} }}\",\"variables\":{{\"fromDate\":\"{current_time_iso}\"}}}}"
+        headers = {
+            'Content-Type': 'application/json',
+            'Authorization': f"Bearer {transcription_api_key}"
+        }
+
+        response = requests.post(os.getenv('URL_TRANSCRIPTIONS'), headers=headers, data=payload, verify=False)
+
+        if response.status_code == 200:
+            data = response.json()
+            print('data',data)
+            transcripts = data['data']["transcripts"]
+
+            # Salvar os dados em um arquivo JSON
+            with open('transcripts.json', 'w') as f:
+                json.dump(transcripts, f, indent=4)
+            print("Ids salvos em 'transcripts.json'.")
+
+        else:
+            print('Falha na requisição para o Fireflies.')
+
+    except requests.exceptions.RequestException as e:
+        print(f"Erro na requisição: {e}")
+    except Exception as e:
+        print(f"Erro geral: {e}")
