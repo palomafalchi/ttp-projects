@@ -146,7 +146,6 @@ def fetch_transcripts():
         current_time_plus_3 = current_time_adjusted + timedelta(hours=3)
         # Converter para o formato ISO 8601
         current_time_iso = current_time_plus_3.isoformat()
-        current_time_iso = "2024-10-28T15:37:40.695001"
         print(current_time_iso)
 
 
