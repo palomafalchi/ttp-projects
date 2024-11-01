@@ -10,7 +10,7 @@ import json
 import re
 
 # Configurações
-load_dotenv('config/.env')
+load_dotenv('/package/config/.env')
 bucket_name = os.getenv('BUCKET_S3')
 url = os.getenv('URL_TRANSCRIPTIONS')
 transcription_api_key = os.getenv('API_KEY_TRANSCRIPTIONS')
@@ -23,10 +23,17 @@ s3 = boto3.client('s3', region_name='sa-east-1')
 
 def lambda_handler(event, context):
     try:
-        fetch_transcripts()
+        # Verifica se está rodando no Lambda
+        if os.environ.get('AWS_EXECUTION_ENV'):
+            file_path = '/tmp/transcripts.json'  # para Lambda
+            print('Ambiente da lambda')
+        else:
+            file_path = 'transcripts.json'  # para execução local
+
+        fetch_transcripts(file_path)
         
         # Ler os dados salvos no arquivo JSON
-        with open('transcripts.json', 'r') as f:
+        with open(file_path, 'r') as f:
             transcripts = json.load(f)
             
     except Exception as e:
@@ -47,12 +54,12 @@ def lambda_handler(event, context):
         title_without_specials = re.sub(r'[^A-Za-z0-9]', '', item['title']) or item['id']
 
         print('title_without_spaces',title_without_specials)
-        pdf_filename = f"{formatted_date}-{title_without_specials}.pdf"
+        pdf_filename = f"{formatted_date}-{title_without_specials}-{item['id']}.pdf"
         
         # Gerar o PDF com o conteúdo atualizado
         pdf_path = format_pdf(pdf_content, pdf_filename)
 
-        print(f"PDF gerado em handleer depois fformat_pdf: {pdf_path}")
+        print(f"PDF gerado em handler depois format_pdf: {pdf_path}")
         
         save_pdf_s3(pdf_path, pdf_filename)
 
@@ -63,8 +70,8 @@ def format_pdf(content, filename):
         pdf.set_auto_page_break(auto=True, margin=15)
         pdf.set_font("Helvetica", size=12)
 
-        # Defina a largura da célula para a largura da página menos as margens
-        page_width = pdf.epw  # epw é a largura da área de conteúdo da página
+        # Calcular a largura efetiva
+        page_width = pdf.w - 2*pdf.l_margin  # largura total menos as margens
 
         content = re.sub(r'…', '...', content) 
         # Adiciona o conteúdo diretamente ao PDF
@@ -130,22 +137,22 @@ def save_pdf_s3(pdf_path, pdf_filename):
         except Exception as e:
             print(f"Erro ao salvar o PDF no S3: {e}")
 
-def fetch_transcripts():
+def fetch_transcripts(file_path):
     try:
         # Obter o horário atual
         current_time = datetime.now()
-        print('current_time.hour', current_time.hour)
+        print('current_time',current_time)
         if current_time.hour == 9:
             # Se for 9h, 15 horas antes pra buscar a partir das 18h do dia anterior
             current_time_adjusted = current_time - timedelta(hours=15)
         else:
-            # Caso contrário, 3 horas antes
-            current_time_adjusted = current_time - timedelta(hours=3)
+            # Caso contrário, buscar 1 hora antes
+            current_time_adjusted = current_time - timedelta(hours=1)
 
-        # Adicionar 3 horas ao horário atual
-        current_time_plus_3 = current_time_adjusted + timedelta(hours=3)
-        # Converter para o formato ISO 8601
-        current_time_iso = current_time_plus_3.isoformat()
+        print('current_time_adjusted',current_time_adjusted)
+
+        current_time_iso = current_time_adjusted
+
         print(current_time_iso)
 
 
@@ -161,11 +168,11 @@ def fetch_transcripts():
             data = response.json()
             print('data',data)
             transcripts = data['data']["transcripts"]
-
+            
             # Salvar os dados em um arquivo JSON
-            with open('transcripts.json', 'w') as f:
+            with open(file_path, 'w') as f:
                 json.dump(transcripts, f, indent=4)
-            print("Ids salvos em 'transcripts.json'.")
+            print("Ids salvos em ", file_path)
 
         else:
             print('Falha na requisição para o Fireflies.')

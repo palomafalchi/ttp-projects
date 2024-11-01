@@ -2,9 +2,7 @@
 __pycache__/
 *.py[cod]
 *$py.class
-transcricoes-fireflies/config/.env
-lambdas-s3/.venv
-lambda_package
+package/config/.env
 .venv
 venv
 .env
