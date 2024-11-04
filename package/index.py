@@ -142,8 +142,8 @@ def fetch_transcripts(file_path):
         # Obter o horário atual
         current_time = datetime.now()
         print('current_time',current_time)
-        if current_time.hour == 9:
-            # Se for 9h, 15 horas antes pra buscar a partir das 18h do dia anterior
+            # Se for 12h (9h horário brasília), pesquisar 15h antes pra buscar a partir das 18h do dia anterior
+        if current_time.hour == 12:
             current_time_adjusted = current_time - timedelta(hours=15)
         else:
             # Caso contrário, buscar 1 hora antes
