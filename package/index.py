@@ -21,6 +21,16 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 # Cliente S3
 s3 = boto3.client('s3', region_name='sa-east-1')
 
+# Dicionário de mapeamento para caracteres especiais
+translation_table = str.maketrans({
+    'á': 'a', 'ã': 'a', 'â': 'a',
+    'é': 'e', 'ê': 'e',
+    'í': 'i',
+    'ó': 'o', 'õ': 'o', 'ô': 'o',
+    'ú': 'u',
+    'ç': 'c'
+})
+
 def lambda_handler(event, context):
     try:
         # Verifica se está rodando no Lambda
@@ -51,15 +61,22 @@ def lambda_handler(event, context):
         
         # Atualizar o pdf_content com as informações da transcrição
         pdf_content = get_sentences(pdf_content, item['id'])
-        title_without_specials = re.sub(r'[^A-Za-z0-9]', '', item['title']) or item['id']
+        
+        # Remove caracteres especiais e traduz caracteres acentuados
+        title_without_specials = item['title'].translate(translation_table)
+        title_without_specials = re.sub(r'[^A-Za-z0-9]', '', title_without_specials)  # Remove outros caracteres não alfanuméricos
+        
+        # Se o resultado estiver vazio, use item['id']
+        title_without_specials = title_without_specials if title_without_specials else item['id']
 
         print('title_without_spaces',title_without_specials)
+
         pdf_filename = f"{formatted_date}-{title_without_specials}-{item['id']}.pdf"
         
         # Gerar o PDF com o conteúdo atualizado
         pdf_path = format_pdf(pdf_content, pdf_filename)
 
-        print(f"PDF gerado em handler depois format_pdf: {pdf_path}")
+        print(f"PDF gerado em handler: {pdf_path}")
         
         save_pdf_s3(pdf_path, pdf_filename)
 
@@ -80,7 +97,6 @@ def format_pdf(content, filename):
         # Salva o PDF no caminho especificado
         pdf_output = f"/tmp/{filename}"
         pdf.output(pdf_output)
-        print('PDF salvo em FORMAT PDF:', pdf_output)
         return pdf_output
     except Exception as e:
         print(f"Erro ao gerar PDF: {e}")
@@ -110,7 +126,7 @@ def get_sentences(pdf_content, id):
     if response.status_code == 200:
         data = json.loads(response.text)
         transcript = data['data']["transcript"]
-        print('transcript', transcript)
+        print('numero de transcrições', len(transcript))
 
         previous_speaker = ""
         for sentence in transcript['sentences']:
@@ -142,19 +158,16 @@ def fetch_transcripts(file_path):
         # Obter o horário atual
         current_time = datetime.now()
         print('current_time',current_time)
-            # Se for 12h (9h horário brasília), pesquisar 15h antes pra buscar a partir das 18h do dia anterior
+            # Se for 12h (9h horário brasília), pesquisar 16h antes pra buscar a partir das 17h do dia anterior
         if current_time.hour == 12:
-            current_time_adjusted = current_time - timedelta(hours=15)
+            current_time_adjusted = current_time - timedelta(hours=16)
         else:
-            # Caso contrário, buscar 1 hora antes
-            current_time_adjusted = current_time - timedelta(hours=1)
+            # Caso contrário, buscar 1h e meia antes
+            current_time_adjusted = current_time - timedelta(minutes=90)
 
         print('current_time_adjusted',current_time_adjusted)
 
         current_time_iso = current_time_adjusted
-
-        print(current_time_iso)
-
 
         payload = f"{{\"query\":\"query Transcripts($fromDate: DateTime) {{ transcripts(fromDate: $fromDate) {{ title id dateString }} }}\",\"variables\":{{\"fromDate\":\"{current_time_iso}\"}}}}"
         headers = {
@@ -168,6 +181,7 @@ def fetch_transcripts(file_path):
             data = response.json()
             print('data',data)
             transcripts = data['data']["transcripts"]
+            print('trancrições encontradas', len(transcripts))
             
             # Salvar os dados em um arquivo JSON
             with open(file_path, 'w') as f:
