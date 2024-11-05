@@ -10,7 +10,7 @@ import json
 import re
 
 # Configurações
-load_dotenv('/package/config/.env')
+load_dotenv('config/.env')
 bucket_name = os.getenv('BUCKET_S3')
 url = os.getenv('URL_TRANSCRIPTIONS')
 transcription_api_key = os.getenv('API_KEY_TRANSCRIPTIONS')
@@ -131,7 +131,7 @@ def get_sentences(pdf_content, id):
         previous_speaker = ""
         for sentence in transcript['sentences']:
             if previous_speaker:
-                if sentence['speaker_name'] == previous_speaker:
+                if sentence['speaker_name'] == previous_speaker or previous_speaker == "":
                     pdf_content = pdf_content.rstrip('\n\n') + f" {sentence['text']}\n\n"
                 else:
                     pdf_content += f"{sentence['speaker_name']}: {sentence['text']}\n\n"
@@ -158,8 +158,8 @@ def fetch_transcripts(file_path):
         # Obter o horário atual
         current_time = datetime.now()
         print('current_time',current_time)
-            # Se for 12h (9h horário brasília), pesquisar 16h antes pra buscar a partir das 17h do dia anterior
-        if current_time.hour == 12:
+            # Se for 11h (8h horário brasília), pesquisar 16h antes pra buscar a partir das 16h55 do dia anterior
+        if current_time.hour == 11:
             current_time_adjusted = current_time - timedelta(hours=16)
         else:
             # Caso contrário, buscar 1h e meia antes
